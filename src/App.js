@@ -1,7 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-// REPLACE THIS WITH YOUR HOSTINGER DOMAIN PATH
-// If your site is example.com, this is likely https://example.com/api/index.php
 const API_URL = "https://editor.aadilraza.in/api/index.php";
 
 export default function App() {
