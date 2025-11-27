@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
+
 const API_URL = "https://editor.aadilraza.in/api/index.php";
 
 export default function App() {
   const [user, setUser] = useState(null);
-  
+
   if (!user) {
     return <Login onLogin={setUser} />;
   }
@@ -16,9 +18,13 @@ function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -26,7 +32,7 @@ function Login({ onLogin }) {
         body: JSON.stringify({ action: 'login', username, password }),
       });
       const data = await res.json();
-      
+
       if (data.success) {
         onLogin(data.user);
       } else {
@@ -34,31 +40,54 @@ function Login({ onLogin }) {
       }
     } catch (err) {
       setError('Connection error. Is the API URL correct?');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="p-8 bg-white rounded shadow-md w-80">
-        <h2 className="mb-4 text-xl font-bold text-center">Login</h2>
-        {error && <div className="mb-2 text-red-500 text-sm">{error}</div>}
-        <input
-          className="w-full p-2 mb-3 border rounded"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-        />
-        <input
-          className="w-full p-2 mb-4 border rounded"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-        <button className="w-full p-2 text-white bg-blue-600 rounded hover:bg-blue-700">
-          Sign In
-        </button>
-      </form>
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-header">
+          <h2>Welcome Back</h2>
+          <p>Sign in to continue to your collaborative editor</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="error-message">
+              <span>⚠️</span> {error}
+            </div>
+          )}
+
+          <div className="input-group">
+            <label>Username</label>
+            <input
+              className="input-field"
+              placeholder="Enter your username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Password</label>
+            <input
+              className="input-field"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+
+          <button className="btn-primary" disabled={isLoading}>
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -69,6 +98,14 @@ function Editor({ user, onLogout }) {
   const [status, setStatus] = useState('Synced');
   const timeoutRef = useRef(null);
   const isTypingRef = useRef(false);
+
+  // Helper to get status class
+  const getStatusClass = (statusText) => {
+    if (statusText === 'Synced' || statusText === 'Saved') return 'status-synced';
+    if (statusText === 'Saving...') return 'status-saving';
+    if (statusText === 'Typing...') return 'status-typing';
+    return 'status-error';
+  };
 
   // 1. Polling: Fetch data every 2 seconds
   useEffect(() => {
@@ -120,28 +157,42 @@ function Editor({ user, onLogout }) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      <div className="p-4 bg-white border-b flex justify-between items-center shadow-sm">
-        <div>
-          <h1 className="font-bold text-lg">Collab Editor</h1>
-          <span className={`text-xs ${status === 'Error saving' ? 'text-red-500' : 'text-green-600'}`}>
-            ● {status}
-          </span>
+    <div className="editor-wrapper">
+      <header className="editor-header">
+        <div className="header-left">
+          <div className="logo">
+            <span>📝</span> Collab Editor
+          </div>
+          <div className={`status-indicator ${getStatusClass(status)}`}>
+            <div className="status-dot"></div>
+            {status}
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">User: {user}</span>
-          <button onClick={onLogout} className="text-sm text-red-500 hover:underline">Logout</button>
+
+        <div className="header-right">
+          <div className="user-badge">
+            <div className="avatar">
+              {user.charAt(0).toUpperCase()}
+            </div>
+            <span className="username">{user}</span>
+          </div>
+          <button onClick={onLogout} className="btn-logout">
+            Logout
+          </button>
         </div>
-      </div>
-      
-      <div className="flex-1 p-8">
-        <textarea
-          className="w-full h-full p-6 border rounded shadow-sm focus:outline-none focus:ring-2 ring-blue-200 resize-none font-mono text-gray-700"
-          value={content}
-          onChange={handleChange}
-          placeholder="Start typing..."
-        />
-      </div>
+      </header>
+
+      <main className="editor-workspace">
+        <div className="document-container">
+          <textarea
+            className="document-textarea"
+            value={content}
+            onChange={handleChange}
+            placeholder="Start typing your document here..."
+            spellCheck={false}
+          />
+        </div>
+      </main>
     </div>
   );
 }
